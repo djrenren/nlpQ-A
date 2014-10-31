@@ -1,13 +1,10 @@
-import nltk
+import sentence
 
 # Word markers
 qwords = ["who", "what", "when", "where", "why", "how"]
 interjections = ["um", "hm", "uh", "mm", "well", "so", "alright"]
-cognitives = ["feel", "think", "guess", "know", "remember", "like", "happen", "looks", "look like"]
+cognitives = ["feel", "think", "guess", "know", "remember", "like", "happen", "looks"]
 uncertainties = ["approximately", "maybe", "perhaps", "probably", "might", "unknown"]
-
-# Sound markers
-sounds = ["sl", "sp", "lg", "ls", "cg"]
 
 # Phrase Markers
 
@@ -21,7 +18,8 @@ class StantonFeatures:
         pass
 
     def extract_fetures(self, sentence):
-        words = nltk.word_tokenize(sentence.original_text)
+        #words = nltk.word_tokenize(sentence.original_text)
+        words = sentence.clean_tokens
         
         #print sentence
 
@@ -51,14 +49,10 @@ class StantonFeatures:
                 found_uncertainties.append(uncertainty)
                 
         # Sound markers
-        found_sounds = []
-        for sound in sounds:
-            if sound in words:
-                found_sounds.append(sound)
-        
+        found_sounds = sentence.special_tokens
 
         #return extracted features as a list...
-        features = [found_qwords, found_interjections, found_cognitives, found_uncertainties, found_sounds]        
+        features = [len(found_qwords) > 0, len(found_interjections), len(found_cognitives), len(found_uncertainties), len(found_sounds)]
         
-        print features
+        #print features
         return features
