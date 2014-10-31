@@ -48,6 +48,8 @@ def main():
     print("Loading Training Set...")
     training_set = import_dataset(sys.argv[1])
 
+    #for t in training_set:
+    #    print t.original_text
 
     #...create the feature extractors....
     feature_extractors = [DavilaFeatures(), StantonFeatures(), RennerFeatures()]
