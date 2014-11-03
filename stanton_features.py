@@ -1,5 +1,3 @@
-import sentence
-
 # Word markers
 qwords = ["who", "what", "when", "where", "why", "how"]
 interjections = ["um", "hm", "uh", "mm", "well", "so", "alright"]
@@ -50,9 +48,27 @@ class StantonFeatures:
                 
         # Sound markers
         found_sounds = sentence.special_tokens
+        
+        # POS
+        num_adjectives = 0
+        num_adverbs = 0
+        num_nouns = 0
+        for token in sentence.tokens_pos:
+            print token
+            if token[1] == "JJ":
+                num_adjectives += 1
+            if token[1] == "RB":
+                num_adverbs += 1
+            if token[1] == "NN":
+                num_nouns += 1
+        percent_adjectives = float(num_adjectives) / len(sentence.tokens_pos)
+        percent_adverbs = float(num_adverbs) / len(sentence.tokens_pos)
+        percent_nouns =  float(num_nouns) / len(sentence.tokens_pos)
 
         #return extracted features as a list...
-        features = [len(found_qwords) > 0, len(found_interjections), len(found_cognitives), len(found_uncertainties), len(found_sounds)]
+        features = [len(found_qwords) > 0, len(found_interjections), len(found_cognitives),
+                    len(found_uncertainties), len(found_sounds), percent_adjectives, percent_adverbs,
+                    percent_nouns]
         
         #print features
         return features
