@@ -40,6 +40,7 @@ class Sentence:
 
         self.tokens_pos = nltk.pos_tag(self.clean_tokens)
 
+
         """
         #Un-comment and change id's for debugging purpuses..
         if subject_id == "AS2" and image_id == "n1" and self.question_id == "q2":
@@ -116,8 +117,9 @@ class Sentence:
                 #move to previous word...
                 position -= 1
 
+            #Symbols that must be removed
             #...remove * ...
-            if raw_tokens[position] == "*":
+            if raw_tokens[position] == "*" or raw_tokens[position] == "[" or raw_tokens[position] == "]":
                 del raw_tokens[position]
                 #move to previous word...
                 position -= 1
