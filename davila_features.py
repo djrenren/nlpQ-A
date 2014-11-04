@@ -8,13 +8,17 @@ class DavilaFeatures:
     #N_GRAM_SIZES = [1, 2, 3, 4]
     #USE_POS = True
 
-    #Size, Top Emotion (%), Top Question (%), POS, Total W, First Match
+    #Size, Top Emotion (%), Top Question (%), POS, Total W, First Match, Limit First N
     #n, TopEmotion, TopQuestion, UsePOS, UseTotalW, UseFirstW
     N_GRAMS = [
-        (1, 1.0, 1.0, False, True, True),
-        (2, 1.0, 1.0, False, True, True),
-        (1, 1.0, 1.0, True, True, True),
-        (2, 1.0, 1.0, True, True, True),
+        (1, 1.0, 1.0, False, True, True, 1),
+        (2, 1.0, 1.0, False, True, True, 1),
+        (1, 1.0, 1.0, False, True, True, None),
+        (2, 1.0, 1.0, False, True, True, None),
+        (1, 1.0, 1.0, True, True, True, 1),
+        (2, 1.0, 1.0, True, True, True, 1),
+        (1, 1.0, 1.0, True, True, True, None),
+        (2, 1.0, 1.0, True, True, True, None),
     ]
 
 
@@ -41,7 +45,7 @@ class DavilaFeatures:
         return roots
 
     @staticmethod
-    def get_sentence_n_grams(sentence, n, usePOS):
+    def get_sentence_n_grams(sentence, n, usePOS, limit_first):
         if usePOS:
             list_tokens = [pos for token, pos in sentence.tokens_pos]
         else:
@@ -58,10 +62,13 @@ class DavilaFeatures:
             if len(last_tokens) == n:
                 n_grams.append(list(last_tokens))
 
+            if not limit_first is None and len(n_grams) >= limit_first:
+                break
+
         return n_grams
 
     @staticmethod
-    def get_weighted_n_grams(training_set, n, usePOS):
+    def get_weighted_n_grams(training_set, n, usePOS, limit_first):
         #... extract.....
         count_n_grams = {}
 
@@ -92,6 +99,9 @@ class DavilaFeatures:
                     count_n_grams[key][sentence.label_emotion] += 1
                     count_n_grams[key][sentence.label_question] += 1
 
+                if not limit_first is None and len(count_n_grams.keys()) >= limit_first:
+                    break
+
         #...compute Log-Likelihoods....
         likelihoods_questions = []
         likelihoods_emotions = []
@@ -115,9 +125,10 @@ class DavilaFeatures:
 
         #DO N-GRAMS!!
         for idx, params in enumerate(DavilaFeatures.N_GRAMS):
-            n, TopEmotion, TopQuestion, UsePOS, UseTotalW, UseFirstW = params
+            n, TopEmotion, TopQuestion, UsePOS, UseTotalW, UseFirstW, LimitFirst = params
 
-            likelihoods_questions, likelihoods_emotions = DavilaFeatures.get_weighted_n_grams(training_set, n, UsePOS)
+            likelihoods_questions, likelihoods_emotions = DavilaFeatures.get_weighted_n_grams(training_set, n,
+                                                                                              UsePOS, LimitFirst)
 
             #... questions....
             n_question_words = int(TopQuestion * len(likelihoods_questions))
@@ -161,52 +172,66 @@ class DavilaFeatures:
         #list_tokens = DavilaFeatures.get_roots(sentence)
 
         for idx, params in enumerate(DavilaFeatures.N_GRAMS):
-            n, TopEmotion, TopQuestion, UsePOS, UseTotalW, UseFirstW = params
+            n, TopEmotion, TopQuestion, UsePOS, UseTotalW, UseFirstW, LimitFirst = params
 
-            n_grams = DavilaFeatures.get_sentence_n_grams(sentence, n, UsePOS)
+            n_grams = DavilaFeatures.get_sentence_n_grams(sentence, n, UsePOS, LimitFirst)
             all_keys = ["-".join(n_gram) for n_gram in n_grams]
 
-            #check question words...
+            
             first_emotion_label = None
-            total_w = {"A": 0.0, "Q": 0.0}
+            first_emotion_weight = {"E": 0.0, "M": 0.0}
+            first_question_label = None
+            first_question_weight = {"A": 0.0, "Q": 0.0}
+            total_w = {"E": 0.0, "M": 0.0, "A": 0.0, "Q": 0.0}
+
+            #check question words...
             for w, key, label in self.top_question_ngrams[idx]:
                 #features.append(1 if word in list_tokens else 0)
                 if key in all_keys:
                     total_w[label] += w
 
-                    if first_emotion_label is None:
-                        first_emotion_label = 1 if label == "E" else 0
+                    if first_question_label is None:
+                        first_question_label = 1 if label == "Q" else 0
 
-            if first_emotion_label is None:
-                first_emotion_label = self.majority_label["E"]
+                    if w > first_question_weight[label]:
+                        first_question_weight[label] = w
 
+            if first_question_label is None:
+                first_question_label = self.majority_label["Q"]
+            
             #add active features....
             if UseTotalW:
                 features.append(total_w["A"])
                 features.append(total_w["Q"])
             if UseFirstW:
-                features.append(first_emotion_label)
+                features.append(first_question_label)
+                features.append(first_question_weight["Q"])
+                features.append(first_question_weight["A"])
 
-            #check emotion words...
-            first_question_label = None
-            total_w = {"E": 0.0, "M": 0.0}
+            
+            #check emotion words...            
             for w, key, label in self.top_emotion_ngrams[idx]:
                 #features.append(1 if word in list_tokens else 0)
                 if key in list_tokens:
                     total_w[label] += w
 
-                    if first_question_label is None:
-                        first_question_label = 1 if label == "Q" else 0
+                    if first_emotion_label is None:
+                        first_emotion_label = 1 if label == "E" else 0
 
-            if first_question_label is None:
-                first_question_label = self.majority_label["Q"]
+                    if w > first_emotion_weight[label]:
+                        first_emotion_weight[label] = w
+                    
+            if first_emotion_label is None:
+                first_emotion_label = self.majority_label["E"]
 
             if UseTotalW:
                 features.append(total_w["E"])
                 features.append(total_w["M"])
+            
             if UseFirstW:
-                features.append(first_question_label)
-
+                features.append(first_emotion_label)
+                features.append(first_emotion_weight["E"])
+                features.append(first_emotion_weight["M"])
 
         #print(features)
 

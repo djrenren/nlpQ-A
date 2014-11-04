@@ -5,6 +5,45 @@ import nltk
 
 class Sentence:
     SPECIAL_TOKENS = ["sp"]
+    APOSTROPHE_EXPANSIONS = [
+        {
+            "LEFT": {"i": "i"},
+            "RIGHT": {"m": "am"},
+        },
+        {
+            "LEFT": {"i": "i", "you": "you", "we": "we",
+                     "they": "they", "might": "might"},
+            "RIGHT": {"ve": "have"},
+        },
+        {
+            "LEFT": {"i": "i", "you": "you", "he": "he",
+                     "she": "she", "it": "it", "we": "we",
+                     "they": "they", "that": "that"},
+            "RIGHT": {"ll": "will"},
+        },
+        {
+            "LEFT": {"he": "he", "she": "she", "it": "it",
+                     "there": "there", "what": "what", "that": "that"},
+            "RIGHT": {"s": "is"},
+        },
+        {
+            "LEFT": {"you": "you", "we": "we", "they": "they"},
+            "RIGHT": {"re": "are"},
+        },
+        {
+            "LEFT": {"don": "do", "didn": "did", "won": "will",
+                     "doesn": "does", "shouldn": "should", "wasn": "was",
+                     "hasn": "has", "wouldn": "would", "isn": "is",
+                     "can": "can"},
+            "RIGHT": {"t": "not"},
+        },
+        {
+            "LEFT": {"i": "i", "you": "you", "he": "he",
+                     "she": "she", "it": "it",
+                     "we": "we", "they": "they"},
+            "RIGHT": {"d": "would"},
+        },
+    ]
 
     def __init__(self, subject_id, image_id, question_id, label_question, label_emotion, original_text):
         self.subject_id = subject_id
@@ -39,7 +78,6 @@ class Sentence:
                 self.clean_tokens.append(token)
 
         self.tokens_pos = nltk.pos_tag(self.clean_tokens)
-
 
         """
         #Un-comment and change id's for debugging purpuses..
@@ -109,10 +147,28 @@ class Sentence:
 
             #join words with '
             if raw_tokens[position] == "'" and position > 0 and position + 1 < len(raw_tokens):
-                #join the parts of the word separated by the tokenizer into a single word
-                raw_tokens[position - 1] = raw_tokens[position - 1] + "'" + raw_tokens[position + 1]
-                del raw_tokens[position + 1]
-                del raw_tokens[position]
+                #check possible cases...
+
+                #find right expansion
+                left_expansion = None
+                right_expansion = None
+                for expansion in Sentence.APOSTROPHE_EXPANSIONS:
+                    left = raw_tokens[position - 1]
+                    right = raw_tokens[position + 1]
+                    if left in expansion["LEFT"] and right in expansion["RIGHT"]:
+                        left_expansion = expansion["LEFT"][left]
+                        right_expansion = expansion["RIGHT"][right]
+
+                if left_expansion is None:
+                    #No expansion found!
+                    #join the parts of the word separated by the tokenizer into a single word
+                    raw_tokens[position - 1] = raw_tokens[position - 1] + "'" + raw_tokens[position + 1]
+                    del raw_tokens[position + 1]
+                    del raw_tokens[position]
+                else:
+                    raw_tokens[position - 1] = left_expansion
+                    raw_tokens[position] = right_expansion
+                    del raw_tokens[position + 1]
 
                 #move to previous word...
                 position -= 1
